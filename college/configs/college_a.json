@@ -1,0 +1,45 @@
+{
+  "name": "A",
+  "name_cn": "学院A",
+  "port": 5001,
+  "db_path": "data/college_a.db",
+  "dbms": "SQL Server",
+  "tables": {
+    "account": {
+      "name": "账号表",
+      "columns": {
+        "account_id": "账号",
+        "password": "密码",
+        "role": "权限"
+      }
+    },
+    "student": {
+      "name": "学生表",
+      "columns": {
+        "student_id": "学号",
+        "name": "姓名",
+        "sex": "性别",
+        "major": "院系"
+      }
+    },
+    "course": {
+      "name": "课程表",
+      "columns": {
+        "course_id": "课程编号",
+        "name": "课程名称",
+        "score": "学分",
+        "teacher": "授课教师",
+        "location": "授课地点",
+        "time": "学时"
+      }
+    },
+    "enrollment": {
+      "name": "选课表",
+      "columns": {
+        "student_id": "学号",
+        "course_id": "课程编号",
+        "score": "成绩"
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# Integrated Educational Management System — Requirements
+
+Flask>=3.0
+lxml>=6.0
+requests>=2.28

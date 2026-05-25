@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Classes">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="class" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="id" type="xs:string"/>
+              <xs:element name="name" type="xs:string"/>
+              <xs:element name="score" type="xs:unsignedByte"/>
+              <xs:element name="time" type="xs:unsignedByte"/>
+              <xs:element name="teacher" type="xs:string"/>
+              <xs:element name="location" type="xs:string"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="college" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

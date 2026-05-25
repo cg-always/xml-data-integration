@@ -1,0 +1,45 @@
+{
+  "name": "B",
+  "name_cn": "学院B",
+  "port": 5002,
+  "db_path": "data/college_b.db",
+  "dbms": "Oracle",
+  "tables": {
+    "account": {
+      "name": "账户表",
+      "columns": {
+        "account_id": "用户名",
+        "password": "口令",
+        "role": "角色"
+      }
+    },
+    "student": {
+      "name": "学生表",
+      "columns": {
+        "student_id": "编号",
+        "name": "名字",
+        "sex": "性别",
+        "major": "专业"
+      }
+    },
+    "course": {
+      "name": "课程表",
+      "columns": {
+        "course_id": "编号",
+        "name": "名称",
+        "score": "学时",
+        "teacher": "教师",
+        "location": "地点",
+        "time": "学分"
+      }
+    },
+    "enrollment": {
+      "name": "选课表",
+      "columns": {
+        "student_id": "学生编号",
+        "course_id": "课程编号",
+        "score": "得分"
+      }
+    }
+  }
+}

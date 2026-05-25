@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>集成教务管理系统 — 集成服务器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', sans-serif; background: #f0f2f5; }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white; padding: 18px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header h2 { font-size: 22px; }
+        .header .subtitle { font-size: 13px; opacity: 0.8; }
+        .nav {
+            background: #16213e; display: flex; padding: 0 20px;
+        }
+        .nav a {
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            padding: 14px 22px; font-size: 14px; border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .nav a:hover, .nav a.active {
+            color: white; border-bottom-color: #e94560;
+            background: rgba(255,255,255,0.05);
+        }
+        .container { max-width: 1300px; margin: 25px auto; padding: 0 20px; }
+        .card {
+            background: white; border-radius: 10px;
+            padding: 25px; margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .card h3 { color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #0f3460; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { background: #f0f2f5; padding: 10px 8px; text-align: left; color: #555; font-weight: bold; border-bottom: 2px solid #e0e0e0; }
+        td { padding: 10px 8px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9ff; }
+        .badge {
+            display: inline-block; padding: 2px 10px; border-radius: 10px;
+            font-size: 11px; font-weight: bold;
+        }
+        .badge-a { background: #e3f2fd; color: #1565c0; }
+        .badge-b { background: #fce4ec; color: #c62828; }
+        .badge-c { background: #e8f5e9; color: #2e7d32; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .stat-card {
+            color: white; padding: 25px; border-radius: 10px; text-align: center;
+        }
+        .stat-card:nth-child(1) { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .stat-card:nth-child(2) { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .stat-card:nth-child(3) { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .stat-num { font-size: 36px; font-weight: bold; }
+        .stat-label { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+        .college-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .college-card {
+            border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px;
+        }
+        .college-card h4 { margin-bottom: 12px; color: #333; }
+        .college-card .info-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+        .college-card .info-row .val { font-weight: bold; color: #555; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 6px; color: #555; font-weight: bold; font-size: 14px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 10px 14px; border: 2px solid #e0e0e0;
+            border-radius: 6px; font-size: 15px;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #0f3460; }
+        .btn {
+            display: inline-block; padding: 10px 24px; border-radius: 6px;
+            font-size: 15px; cursor: pointer; border: none;
+        }
+        .btn-primary { background: #0f3460; color: white; }
+        .btn-primary:hover { background: #1a4a7a; }
+        .btn-danger { background: #e94560; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .message { padding: 12px 18px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .message-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #2e7d32; }
+        .message-error { background: #ffebee; color: #c62828; border-left: 4px solid #c62828; }
+        .empty-state { text-align: center; color: #999; padding: 40px; }
+        .welcome-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .welcome-card {
+            background: white; border-radius: 10px; padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .welcome-card h4 { color: #333; margin-bottom: 10px; }
+        .welcome-card p { color: #666; line-height: 1.8; font-size: 14px; }
+        .welcome-card ul { color: #666; font-size: 14px; line-height: 2; margin-left: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h2>集成教务管理系统</h2>
+            <div class="subtitle">Integration Server — 基于XML数据集成的跨院系课程共享平台</div>
+        </div>
+    </div>
+
+    <div class="nav">
+        <a href="/" class="{% if not active_tab %}active{% endif %}">系统首页</a>
+        <a href="/courses/shared" class="{% if active_tab == 'courses' %}active{% endif %}">共享课程</a>
+        <a href="/students/all" class="{% if active_tab == 'students' %}active{% endif %}">全部学生</a>
+        <a href="/statistics" class="{% if active_tab == 'stats' %}active{% endif %}">统计信息</a>
+        <a href="/enroll" class="{% if active_tab == 'enroll' %}active{% endif %}">跨院选课</a>
+        <a href="/withdraw" class="{% if active_tab == 'withdraw' %}active{% endif %}">退选课程</a>
+    </div>
+
+    <div class="container">
+
+        <!-- Messages -->
+        {% if message %}
+        <div class="message message-{{ message_type or 'success' }}">{{ message }}</div>
+        {% endif %}
+
+        <!-- ============ HOME TAB ============ -->
+        {% if not active_tab %}
+        <div class="welcome-grid">
+            <div class="welcome-card">
+                <h4>系统概述</h4>
+                <p>
+                    本集成教务管理系统基于 <strong>XML 数据集成技术</strong>实现，
+                    将学院A（SQL Server）、学院B（Oracle）、学院C（MySQL）
+                    三个异构数据库的教务系统互联互通，实现跨院系课程共享。
+                </p>
+            </div>
+            <div class="welcome-card">
+                <h4>系统特性</h4>
+                <ul>
+                    <li><strong>透明性</strong>：屏蔽底层数据库差异，用户无需关注数据分布</li>
+                    <li><strong>可扩展性</strong>：基于XML标准格式进行数据交换</li>
+                    <li><strong>健壮性</strong>：采用成熟的XML/XSLT技术</li>
+                    <li><strong>安全性</strong>：各学院独立认证，数据按需暴露</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>学院连接状态</h3>
+            <div class="college-grid">
+                {% for key, info in colleges.items() %}
+                <div class="college-card">
+                    <h4>{{ info.name }}</h4>
+                    <div class="info-row"><span>数据库系统</span><span class="val">{{ info.dbms }}</span></div>
+                    <div class="info-row"><span>服务端口</span><span class="val">{{ info.port }}</span></div>
+                    <div class="info-row"><span>访问地址</span><span class="val">127.0.0.1:{{ info.port }}</span></div>
+                    <div class="info-row"><span>学生总数</span><span class="val">50</span></div>
+                    <div class="info-row"><span>课程总数</span><span class="val">10</span></div>
+                    <div style="margin-top:12px;">
+                        <a href="http://127.0.0.1:{{ info.port }}/login" target="_blank"
+                           style="color:#0f3460; text-decoration:underline; font-size:13px;">
+                            打开{{ info.name }}教务系统 →
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>技术架构</h3>
+            <div style="padding: 20px 10px; overflow-x: auto;">
+
+                <!-- Row 1: A ── Server ── B -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0;">
+
+                    <!-- College A -->
+                    <div style="flex-shrink: 0; border: 2px solid #1565c0; border-radius: 8px; padding: 14px 18px; background: #e3f2fd; text-align: center; width: 120px;">
+                        <div style="font-weight: bold; color: #1565c0; font-size: 14px;">学院A</div>
+                        <div style="font-size: 11px; color: #555; margin-top: 2px;">SQL Server</div>
+                        <div style="font-size: 10px; color: #999;">:5001</div>
+                    </div>
+
+                    <!-- Arrow: A → Server -->
+                    <div style="flex-shrink: 0; display: flex; align-items: center; padding: 0 6px;">
+                        <div style="width: 20px; height: 2px; background: #999;"></div>
+                        <div style="width: 0; height: 0; border-left: 5px solid #999; border-top: 4px solid transparent; border-bottom: 4px solid transparent;"></div>
+                        <span style="font-size: 9px; color: #999; margin: 0 3px;">XML</span>
+                        <div style="width: 0; height: 0; border-right: 5px solid #999; border-top: 4px solid transparent; border-bottom: 4px solid transparent;"></div>
+                        <div style="width: 20px; height: 2px; background: #999;"></div>
+                    </div>
+
+                    <!-- Integration Server -->
+                    <div style="flex-shrink: 0; border: 3px solid #e94560; border-radius: 10px; padding: 16px 22px; background: #fff5f5; text-align: center; width: 195px;">
+                        <div style="font-weight: bold; color: #c62828; font-size: 16px; margin-bottom: 4px;">集成服务器</div>
+                        <div style="font-size: 11px; color: #999; margin-bottom: 10px;">:5000</div>
+                        <div style="border-top: 1px dashed #e0c0c0; padding-top: 10px;">
+                            <div style="font-size: 11px; color: #666; line-height: 1.7;">XSLT 格式转换</div>
+                            <div style="font-size: 11px; color: #666; line-height: 1.7;">XML Schema 验证</div>
+                            <div style="font-size: 11px; color: #666; line-height: 1.7;">跨院选课 / 退课</div>
+                            <div style="font-size: 11px; color: #666; line-height: 1.7;">统一统计查询</div>
+                        </div>
+                    </div>
+
+                    <!-- Arrow: Server → B -->
+                    <div style="flex-shrink: 0; display: flex; align-items: center; padding: 0 6px;">
+                        <div style="width: 20px; height: 2px; background: #999;"></div>
+                        <div style="width: 0; height: 0; border-left: 5px solid #999; border-top: 4px solid transparent; border-bottom: 4px solid transparent;"></div>
+                        <span style="font-size: 9px; color: #999; margin: 0 3px;">XML</span>
+                        <div style="width: 0; height: 0; border-right: 5px solid #999; border-top: 4px solid transparent; border-bottom: 4px solid transparent;"></div>
+                        <div style="width: 20px; height: 2px; background: #999;"></div>
+                    </div>
+
+                    <!-- College B -->
+                    <div style="flex-shrink: 0; border: 2px solid #f9a825; border-radius: 8px; padding: 14px 18px; background: #fffde7; text-align: center; width: 120px;">
+                        <div style="font-weight: bold; color: #f57f17; font-size: 14px;">学院B</div>
+                        <div style="font-size: 11px; color: #555; margin-top: 2px;">Oracle</div>
+                        <div style="font-size: 10px; color: #999;">:5002</div>
+                    </div>
+
+                </div>
+
+                <!-- Vertical connection: Server → C -->
+                <div style="display: flex; justify-content: center;">
+                    <!-- Spacer matching A width + arrow -->
+                    <div style="width: 120px; flex-shrink: 0;"></div>
+                    <div style="width: 62px; flex-shrink: 0;"></div>
+                    <!-- Centered under Server -->
+                    <div style="width: 195px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; padding: 4px 0;">
+                        <div style="width: 2px; height: 12px; background: #999;"></div>
+                        <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #999;"></div>
+                        <span style="font-size: 9px; color: #999; margin: 2px 0;">XML</span>
+                        <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #999;"></div>
+                        <div style="width: 2px; height: 12px; background: #999;"></div>
+                    </div>
+                    <div style="width: 62px; flex-shrink: 0;"></div>
+                    <div style="width: 120px; flex-shrink: 0;"></div>
+                </div>
+
+                <!-- Row 3: College C centered under Server -->
+                <div style="display: flex; justify-content: center;">
+                    <div style="width: 120px; flex-shrink: 0;"></div>
+                    <div style="width: 62px; flex-shrink: 0;"></div>
+                    <div style="border: 2px solid #2e7d32; border-radius: 8px; padding: 14px 18px; background: #e8f5e9; text-align: center; width: 120px;">
+                        <div style="font-weight: bold; color: #2e7d32; font-size: 14px;">学院C</div>
+                        <div style="font-size: 11px; color: #555; margin-top: 2px;">MySQL</div>
+                        <div style="font-size: 10px; color: #999;">:5003</div>
+                    </div>
+                    <div style="width: 62px; flex-shrink: 0;"></div>
+                    <div style="width: 120px; flex-shrink: 0;"></div>
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ============ COURSES TAB ============ -->
+        {% if active_tab == 'courses' %}
+        <div class="card">
+            <h3>全部共享课程（{{ all_courses|length if all_courses else 0 }} 门）</h3>
+            {% if all_courses %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>课程编号</th>
+                        <th>课程名称</th>
+                        <th>学分</th>
+                        <th>教师</th>
+                        <th>上课地点</th>
+                        <th>所属学院</th>
+                        <th>数据库</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in all_courses %}
+                    <tr>
+                        <td>{{ c.course_id }}</td>
+                        <td>{{ c.name }}</td>
+                        <td>{{ c.score }}</td>
+                        <td>{{ c.teacher }}</td>
+                        <td>{{ c.location }}</td>
+                        <td><span class="badge badge-{{ c.college|lower }}">{{ c.college_name }}</span></td>
+                        <td>{{ c.dbms }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">无法获取课程数据，请确保各学院服务器已启动</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- ============ STUDENTS TAB ============ -->
+        {% if active_tab == 'students' %}
+        <div class="card">
+            <h3>全部学生（{{ all_students|length if all_students else 0 }} 人）</h3>
+            {% if all_students %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>学号</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>专业</th>
+                        <th>所属学院</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in all_students %}
+                    <tr>
+                        <td>{{ s.student_id }}</td>
+                        <td>{{ s.name }}</td>
+                        <td>{{ s.sex }}</td>
+                        <td>{{ s.major }}</td>
+                        <td><span class="badge badge-{{ s.college|lower }}">{{ s.college_name }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">无法获取学生数据，请确保各学院服务器已启动</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- ============ STATISTICS TAB ============ -->
+        {% if active_tab == 'stats' %}
+        {% if stats %}
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-num">{{ stats.total_students }}</div>
+                <div class="stat-label">学生总数（3个学院）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ stats.total_courses }}</div>
+                <div class="stat-label">课程总数（含重复）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ stats.total_enrollments }}</div>
+                <div class="stat-label">选课记录总数</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>各学院详细统计</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>学院</th>
+                        <th>数据库系统</th>
+                        <th>学生数</th>
+                        <th>课程数</th>
+                        <th>选课记录</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, detail in college_details.items() %}
+                    <tr>
+                        <td>{{ detail.name }}</td>
+                        <td>{{ detail.dbms }}</td>
+                        <td>{{ detail.students }}</td>
+                        <td>{{ detail.courses }}</td>
+                        <td>{{ detail.enrollments }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">无法获取统计数据，请确保各学院服务器已启动</div>
+        {% endif %}
+        {% endif %}
+
+        <!-- ============ ENROLL TAB ============ -->
+        {% if active_tab == 'enroll' %}
+        <div class="card">
+            <h3>跨院系选课</h3>
+            <p style="color:#666; margin-bottom:20px; font-size:14px;">
+                学生可以选修其他学院的课程。选课信息将通过XML数据格式导入目标学院的数据库。
+            </p>
+
+            <div style="max-width:600px;">
+                <form method="POST">
+                    <div class="form-group">
+                        <label>学号</label>
+                        <input type="text" name="student_id" placeholder="例如：STUA001、STUB015、STUC030"
+                               required pattern="STU[ABC]\d{3}" title="格式：STU + 学院代码(A/B/C) + 3位数字">
+                    </div>
+                    <div class="form-group">
+                        <label>课程编号</label>
+                        <input type="text" name="course_id" placeholder="例如：COUA005、COUB008、COUC010"
+                               required pattern="COU[ABC]\d{3}" title="格式：COU + 学院代码(A/B/C) + 3位数字">
+                    </div>
+                    <button type="submit" class="btn btn-primary">确认选课</button>
+                </form>
+            </div>
+        </div>
+
+        {% if all_courses %}
+        <div class="card">
+            <h3>所有可选课程（{{ all_courses|length }} 门）</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>课程编号</th>
+                        <th>课程名称</th>
+                        <th>学分</th>
+                        <th>教师</th>
+                        <th>所属学院</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in all_courses[:30] %}
+                    <tr>
+                        <td>{{ c.course_id }}</td>
+                        <td>{{ c.name }}</td>
+                        <td>{{ c.score }}</td>
+                        <td>{{ c.teacher }}</td>
+                        <td><span class="badge badge-{{ c.college|lower }}">{{ c.college_name }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- ============ WITHDRAW TAB ============ -->
+        {% if active_tab == 'withdraw' %}
+        <div class="card">
+            <h3>退选课程</h3>
+            <p style="color:#666; margin-bottom:20px; font-size:14px;">
+                在集成环境下，学生可以退选已选课程（包括跨院系选修的课程）。
+            </p>
+
+            <div style="max-width:600px;">
+                <form method="POST">
+                    <div class="form-group">
+                        <label>学号</label>
+                        <input type="text" name="student_id" placeholder="例如：STUA001、STUB015、STUC030"
+                               required pattern="STU[ABC]\d{3}">
+                    </div>
+                    <div class="form-group">
+                        <label>课程编号</label>
+                        <input type="text" name="course_id" placeholder="例如：COUA005、COUB008、COUC010"
+                               required pattern="COU[ABC]\d{3}">
+                    </div>
+                    <button type="submit" class="btn btn-danger">确认退课</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

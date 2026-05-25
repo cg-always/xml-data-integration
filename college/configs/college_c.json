@@ -1,0 +1,45 @@
+{
+  "name": "C",
+  "name_cn": "学院C",
+  "port": 5003,
+  "db_path": "data/college_c.db",
+  "dbms": "MySQL",
+  "tables": {
+    "account": {
+      "name": "账户表",
+      "columns": {
+        "account_id": "登录名",
+        "password": "密码",
+        "role": "类型"
+      }
+    },
+    "student": {
+      "name": "学生表",
+      "columns": {
+        "student_id": "Sno",
+        "name": "Snm",
+        "sex": "Sex",
+        "major": "Sde"
+      }
+    },
+    "course": {
+      "name": "课程表",
+      "columns": {
+        "course_id": "Cno",
+        "name": "Cnm",
+        "score": "Cpt",
+        "teacher": "Tec",
+        "location": "Pla",
+        "time": "time"
+      }
+    },
+    "enrollment": {
+      "name": "选课表",
+      "columns": {
+        "student_id": "Sno",
+        "course_id": "Cno",
+        "score": "Grd"
+      }
+    }
+  }
+}
