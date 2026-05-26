@@ -30,7 +30,8 @@
         "score": "Cpt",
         "teacher": "Tec",
         "location": "Pla",
-        "time": "time"
+        "time": "time",
+        "shared": "shared"
       }
     },
     "enrollment": {

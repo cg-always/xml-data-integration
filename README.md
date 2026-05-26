@@ -140,9 +140,9 @@ hw3/
 │   ├── __init__.py                 # 统一XML格式常量
 │   └── xml_schemas.py              # XML Schema定义（XSD）
 ├── college/                        # 学院教务系统
-│   ├── app.py                      # 可配置Flask应用
-│   ├── db.py                       # 数据库操作层
-│   ├── xml_api.py                  # XML数据导出/导入
+│   ├── app.py                      # 可配置Flask应用（含原生/统一XML API、XSD验证）
+│   ├── db.py                       # 数据库操作层（含共享课程查询）
+│   ├── xml_api.py                  # XML数据导出/导入（原生格式+统一格式）
 │   ├── data_generator.py           # 测试数据生成器
 │   ├── configs/                    # 三学院异构配置
 │   │   ├── college_a.json         # 学院A配置
@@ -229,7 +229,19 @@ hw3/
        │
 3. POST XML到目标学院的删除接口（/api/xml/enrollments/delete）
        │
-4. 目标学院解析XML，删除本地选课记录，返回结果
+4. 目标学院XSD验证XML，解析后删除本地选课记录，返回结果
+```
+
+### 查询跨院选课记录
+
+```
+1. 学生在集成服务器「我的选课」页面输入学号
+       │
+2. 集成服务器通过XSLT从各学院获取原生选课XML → 转为统一格式
+       │
+3. 筛选该学生的跨院选课记录（排除本院课程）
+       │
+4. 补充课程名称等详情后展示给用户
 ```
 
 ### XML数据交换格式
@@ -260,6 +272,30 @@ hw3/
   </choice>
 </Choices>
 ```
+
+## 数据集成技术要点
+
+### XSLT 格式转换
+
+集成服务器通过 XSLT 将各学院的原生 XML 格式（使用各自数据库的实际列名）转换为统一 XML 格式：
+
+| 转换方向 | XSLT 文件 | 说明 |
+|----------|-----------|------|
+| 学院格式 → 统一 | `formatStudent.xsl` | 将学院 A/B/C 的学生 XML 转为统一格式 |
+| 学院格式 → 统一 | `formatClass.xsl` | 将学院 A/B/C 的课程 XML 转为统一格式 |
+| 学院格式 → 统一 | `formatChoice.xsl` | 将学院 A/B/C 的选课 XML 转为统一格式 |
+| 统一 → 学院格式 | `studentToA.xsl` 等 | 将统一格式转回各学院原生格式 |
+
+### XML Schema 验证
+
+- 统一格式的 XML 数据在 XSLT 转换后、导入目标学院前均经过 XSD Schema 验证
+- Schema 文件位于 `integration/schema/`：`student.xsd`、`class.xsd`、`choice.xsd`
+
+### 课程共享标记
+
+- 每门课程包含 `shared`（共享标记）字段
+- 值为 1 表示该课程开放跨院选课，0 表示仅限本院
+- 集成服务器的「共享课程」页面仅展示标记为共享的课程
 
 ## 常见问题
 

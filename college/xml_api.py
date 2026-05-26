@@ -43,6 +43,7 @@ def courses_to_unified_xml(courses):
         etree.SubElement(el, UF_CTIME).text = _str(c.get('time', 32))
         etree.SubElement(el, UF_CTEACHER).text = _str(c['teacher'])
         etree.SubElement(el, UF_CLOCATION).text = _str(c['location'])
+        etree.SubElement(el, 'shared').text = _str(c.get('shared', 1))
     return etree.tostring(root, encoding='utf-8', xml_declaration=True)
 
 
@@ -73,3 +74,46 @@ def parse_enrollments_xml(xml_data):
 def parse_delete_enrollment_xml(xml_data):
     """Parse enrollment XML for deletion (only needs sid + cid)."""
     return parse_enrollments_xml(xml_data)
+
+
+# ---- Native format exports (college-specific column names) ----
+
+def students_to_native_xml(config, students):
+    """Convert student list to native (college-specific) XML format."""
+    sc = config['tables']['student']['columns']
+    root = etree.Element('Students')
+    for s in students:
+        el = etree.SubElement(root, 'student')
+        etree.SubElement(el, sc['student_id']).text = _str(s['student_id'])
+        etree.SubElement(el, sc['name']).text = _str(s['name'])
+        etree.SubElement(el, sc['sex']).text = _str(s['sex'])
+        etree.SubElement(el, sc['major']).text = _str(s['major'])
+    return etree.tostring(root, encoding='utf-8', xml_declaration=True)
+
+
+def courses_to_native_xml(config, courses):
+    """Convert course list to native (college-specific) XML format."""
+    cc = config['tables']['course']['columns']
+    root = etree.Element('Classes')
+    for c in courses:
+        el = etree.SubElement(root, 'class')
+        etree.SubElement(el, cc['course_id']).text = _str(c['course_id'])
+        etree.SubElement(el, cc['name']).text = _str(c['name'])
+        etree.SubElement(el, cc['score']).text = _str(c['score'])
+        etree.SubElement(el, cc['teacher']).text = _str(c['teacher'])
+        etree.SubElement(el, cc['location']).text = _str(c['location'])
+        etree.SubElement(el, cc.get('time', 'time')).text = _str(c.get('time', 32))
+        etree.SubElement(el, cc.get('shared', 'shared')).text = _str(c.get('shared', 1))
+    return etree.tostring(root, encoding='utf-8', xml_declaration=True)
+
+
+def enrollments_to_native_xml(config, enrollments):
+    """Convert enrollment list to native (college-specific) XML format."""
+    ec = config['tables']['enrollment']['columns']
+    root = etree.Element('Choices')
+    for e in enrollments:
+        el = etree.SubElement(root, 'choice')
+        etree.SubElement(el, ec['student_id']).text = _str(e['student_id'])
+        etree.SubElement(el, ec['course_id']).text = _str(e['course_id'])
+        etree.SubElement(el, ec['score']).text = _str(e.get('score', 0))
+    return etree.tostring(root, encoding='utf-8', xml_declaration=True)

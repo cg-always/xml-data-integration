@@ -30,7 +30,8 @@
         "score": "学时",
         "teacher": "教师",
         "location": "地点",
-        "time": "学分"
+        "time": "学分",
+        "shared": "共享标记"
       }
     },
     "enrollment": {

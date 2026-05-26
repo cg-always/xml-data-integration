@@ -55,7 +55,8 @@ def init_db(config):
         "{cc["score"]}" INTEGER NOT NULL,
         "{cc["teacher"]}" TEXT NOT NULL,
         "{cc["location"]}" TEXT NOT NULL,
-        "{cc["time"]}" INTEGER DEFAULT 32
+        "{cc["time"]}" INTEGER DEFAULT 32,
+        "{cc["shared"]}" INTEGER DEFAULT 1
     )''')
 
     # Enrollment table
@@ -152,14 +153,16 @@ def get_course(config, course_id):
     tn = t['name']
     cc = t['columns']
     c.execute(f'SELECT "{cc["course_id"]}", "{cc["name"]}", "{cc["score"]}", '
-              f'"{cc["teacher"]}", "{cc["location"]}", "{cc["time"]}" '
+              f'"{cc["teacher"]}", "{cc["location"]}", "{cc["time"]}", '
+              f'"{cc["shared"]}" '
               f'FROM "{tn}" WHERE "{cc["course_id"]}"=?', (course_id,))
     row = c.fetchone()
     conn.close()
     if row:
         return {
             'course_id': row[0], 'name': row[1], 'score': row[2],
-            'teacher': row[3], 'location': row[4], 'time': row[5]
+            'teacher': row[3], 'location': row[4], 'time': row[5],
+            'shared': row[6],
         }
     return None
 
@@ -172,11 +175,30 @@ def get_all_courses(config):
     tn = t['name']
     cc = t['columns']
     c.execute(f'SELECT "{cc["course_id"]}", "{cc["name"]}", "{cc["score"]}", '
-              f'"{cc["teacher"]}", "{cc["location"]}", "{cc["time"]}" FROM "{tn}"')
+              f'"{cc["teacher"]}", "{cc["location"]}", "{cc["time"]}", '
+              f'"{cc["shared"]}" FROM "{tn}"')
     rows = c.fetchall()
     conn.close()
     return [{'course_id': r[0], 'name': r[1], 'score': r[2],
-             'teacher': r[3], 'location': r[4], 'time': r[5]} for r in rows]
+             'teacher': r[3], 'location': r[4], 'time': r[5],
+             'shared': r[6]} for r in rows]
+
+
+def get_shared_courses(config):
+    """Get only courses marked as shared."""
+    conn = get_conn(config)
+    c = conn.cursor()
+    t = config['tables']['course']
+    tn = t['name']
+    cc = t['columns']
+    c.execute(f'SELECT "{cc["course_id"]}", "{cc["name"]}", "{cc["score"]}", '
+              f'"{cc["teacher"]}", "{cc["location"]}", "{cc["time"]}", '
+              f'"{cc["shared"]}" FROM "{tn}" WHERE "{cc["shared"]}"=1')
+    rows = c.fetchall()
+    conn.close()
+    return [{'course_id': r[0], 'name': r[1], 'score': r[2],
+             'teacher': r[3], 'location': r[4], 'time': r[5],
+             'shared': r[6]} for r in rows]
 
 
 def get_enrollments(config, student_id=None):
