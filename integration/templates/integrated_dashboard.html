@@ -104,6 +104,7 @@
         <a href="/statistics" class="{% if active_tab == 'stats' %}active{% endif %}">统计信息</a>
         <a href="/enroll" class="{% if active_tab == 'enroll' %}active{% endif %}">跨院选课</a>
         <a href="/withdraw" class="{% if active_tab == 'withdraw' %}active{% endif %}">退选课程</a>
+        <a href="/my-courses" class="{% if active_tab == 'mycourses' %}active{% endif %}">我的选课</a>
     </div>
 
     <div class="container">
@@ -440,6 +441,64 @@
                 </form>
             </div>
         </div>
+        {% endif %}
+
+        <!-- ============ MY COURSES TAB ============ -->
+        {% if active_tab == 'mycourses' %}
+        <div class="card">
+            <h3>我的跨院选课</h3>
+            <p style="color:#666; margin-bottom:20px; font-size:14px;">
+                输入学号查询该学生在其他学院选修的课程（跨院选课记录）。
+            </p>
+
+            <div style="max-width:600px;">
+                <form method="POST">
+                    <div class="form-group">
+                        <label>学号</label>
+                        <input type="text" name="student_id"
+                               placeholder="例如：STUA001、STUB015、STUC030"
+                               value="{{ student_id or '' }}"
+                               required pattern="STU[ABC]\d{3}"
+                               title="格式：STU + 学院代码(A/B/C) + 3位数字">
+                    </div>
+                    <button type="submit" class="btn btn-primary">查询跨院选课</button>
+                </form>
+            </div>
+        </div>
+
+        {% if enrollments is not none %}
+        <div class="card">
+            <h3>查询结果 — 跨院选课记录（{{ enrollments|length }} 门）</h3>
+            {% if enrollments %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>课程编号</th>
+                        <th>课程名称</th>
+                        <th>学分</th>
+                        <th>教师</th>
+                        <th>课程所属学院</th>
+                        <th>成绩</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in enrollments %}
+                    <tr>
+                        <td>{{ e.course_id }}</td>
+                        <td>{{ e.course_name }}</td>
+                        <td>{{ e.score_credit }}</td>
+                        <td>{{ e.teacher }}</td>
+                        <td><span class="badge badge-{{ e.college|lower }}">{{ e.college_name }}</span></td>
+                        <td>{{ e.score }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">{{ message or '暂无跨院选课记录' }}</div>
+            {% endif %}
+        </div>
+        {% endif %}
         {% endif %}
 
     </div>

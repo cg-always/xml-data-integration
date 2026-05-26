@@ -81,9 +81,9 @@
                 <tr><td style="width:150px; font-weight:bold;">学院名称</td><td>{{ config.name_cn }}</td></tr>
                 <tr><td style="font-weight:bold;">数据库系统</td><td>{{ config.dbms }}</td></tr>
                 <tr><td style="font-weight:bold;">端口</td><td>{{ config.port }}</td></tr>
-                <tr><td style="font-weight:bold;">学生表</td><td>{{ config.tables.student.name }}（{{ config.tables.student.columns|join(', ') }}）</td></tr>
-                <tr><td style="font-weight:bold;">课程表</td><td>{{ config.tables.course.name }}（{{ config.tables.course.columns|join(', ') }}）</td></tr>
-                <tr><td style="font-weight:bold;">选课表</td><td>{{ config.tables.enrollment.name }}（{{ config.tables.enrollment.columns|join(', ') }}）</td></tr>
+                <tr><td style="font-weight:bold;">学生表</td><td>{{ config.tables.student.name }}（{{ config.tables.student.columns.values()|join(', ') }}）</td></tr>
+                <tr><td style="font-weight:bold;">课程表</td><td>{{ config.tables.course.name }}（{{ config.tables.course.columns.values()|join(', ') }}）</td></tr>
+                <tr><td style="font-weight:bold;">选课表</td><td>{{ config.tables.enrollment.name }}（{{ config.tables.enrollment.columns.values()|join(', ') }}）</td></tr>
             </table>
         </div>
 

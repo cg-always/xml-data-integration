@@ -34,6 +34,7 @@ COURSE_XSD = '''<?xml version="1.0" encoding="UTF-8"?>
               <xs:element name="time" type="xs:unsignedByte"/>
               <xs:element name="teacher" type="xs:string"/>
               <xs:element name="location" type="xs:string"/>
+              <xs:element name="shared" type="xs:unsignedByte"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>

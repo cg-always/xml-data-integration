@@ -112,10 +112,11 @@ def generate_college_data():
             courses.append({'id': cid, 'name': cname, 'score': score,
                           'teacher': teacher, 'location': location, 'time': time_val})
 
+            shared = 1 if random.random() < 0.6 else 0  # 60% courses are shared
             c.execute(f'INSERT INTO "{cn}" ("{cc["course_id"]}", "{cc["name"]}", '
                       f'"{cc["score"]}", "{cc["teacher"]}", "{cc["location"]}", '
-                      f'"{cc["time"]}") VALUES (?, ?, ?, ?, ?, ?)',
-                      (cid, cname, score, teacher, location, time_val))
+                      f'"{cc["time"]}", "{cc["shared"]}") VALUES (?, ?, ?, ?, ?, ?, ?)',
+                      (cid, cname, score, teacher, location, time_val, shared))
 
         # Insert enrollments (each student takes 5 courses)
         en = tables['enrollment']

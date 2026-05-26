@@ -21,12 +21,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from college.db import (
     init_db, verify_login, get_student, get_all_students,
-    get_course, get_all_courses, get_enrollments, get_student_courses,
-    add_enrollment, delete_enrollment, get_college_stats,
+    get_course, get_all_courses, get_shared_courses, get_enrollments,
+    get_student_courses, add_enrollment, delete_enrollment, get_college_stats,
 )
 from college.xml_api import (
     students_to_unified_xml, courses_to_unified_xml,
     enrollments_to_unified_xml, parse_enrollments_xml, parse_delete_enrollment_xml,
+    students_to_native_xml, courses_to_native_xml, enrollments_to_native_xml,
 )
 from shared.xml_schemas import XSD_MAP
 
@@ -125,6 +126,38 @@ def create_college_app(config_path):
 
     # ---- XML API endpoints (for integration server) ----
 
+    # Native format endpoints (college-specific column names)
+    @app.route('/api/xml/native/students')
+    def api_xml_native_students():
+        """Export all students in native (college-specific) XML format."""
+        students = get_all_students(config)
+        xml_data = students_to_native_xml(config, students)
+        root = etree.fromstring(xml_data)
+        root.set('college', config['name'])
+        xml_data = etree.tostring(root, encoding='utf-8', xml_declaration=True)
+        return Response(xml_data, mimetype='application/xml')
+
+    @app.route('/api/xml/native/courses')
+    def api_xml_native_courses():
+        """Export all courses in native (college-specific) XML format."""
+        courses = get_all_courses(config)
+        xml_data = courses_to_native_xml(config, courses)
+        root = etree.fromstring(xml_data)
+        root.set('college', config['name'])
+        xml_data = etree.tostring(root, encoding='utf-8', xml_declaration=True)
+        return Response(xml_data, mimetype='application/xml')
+
+    @app.route('/api/xml/native/enrollments')
+    def api_xml_native_enrollments():
+        """Export all enrollments in native (college-specific) XML format."""
+        enrollments = get_enrollments(config)
+        xml_data = enrollments_to_native_xml(config, enrollments)
+        root = etree.fromstring(xml_data)
+        root.set('college', config['name'])
+        xml_data = etree.tostring(root, encoding='utf-8', xml_declaration=True)
+        return Response(xml_data, mimetype='application/xml')
+
+    # Unified format endpoints
     @app.route('/api/xml/students')
     def api_xml_students():
         """Export all students as unified XML."""
@@ -142,6 +175,18 @@ def create_college_app(config_path):
     def api_xml_courses():
         """Export all courses as unified XML."""
         courses = get_all_courses(config)
+        xml_data = courses_to_unified_xml(courses)
+
+        root = etree.fromstring(xml_data)
+        root.set('college', config['name'])
+        xml_data = etree.tostring(root, encoding='utf-8', xml_declaration=True)
+
+        return Response(xml_data, mimetype='application/xml')
+
+    @app.route('/api/xml/courses/shared')
+    def api_xml_shared_courses():
+        """Export only shared courses as unified XML."""
+        courses = get_shared_courses(config)
         xml_data = courses_to_unified_xml(courses)
 
         root = etree.fromstring(xml_data)
@@ -173,11 +218,17 @@ def create_college_app(config_path):
     def api_import_enrollments():
         """Import enrollment data from unified XML.
 
-        Receives enrollment XML, parses it, and inserts into local DB.
+        Receives enrollment XML, parses it, validates against XSD,
+        and inserts into local DB.
         Used when a student from another college enrolls in this college's course.
         """
         try:
             xml_data = request.data
+            # Validate against XSD schema (encode to bytes for encoding declaration)
+            xsd_doc = etree.fromstring(XSD_MAP['enrollments'].encode('utf-8'))
+            schema = etree.XMLSchema(xsd_doc)
+            xml_doc = etree.fromstring(xml_data)
+            schema.assertValid(xml_doc)
             enrollments = parse_enrollments_xml(xml_data)
             imported = 0
             for enr in enrollments:
@@ -196,6 +247,11 @@ def create_college_app(config_path):
         """
         try:
             xml_data = request.data
+            # Validate against XSD schema (encode to bytes for encoding declaration)
+            xsd_doc = etree.fromstring(XSD_MAP['enrollments'].encode('utf-8'))
+            schema = etree.XMLSchema(xsd_doc)
+            xml_doc = etree.fromstring(xml_data)
+            schema.assertValid(xml_doc)
             enrollments = parse_delete_enrollment_xml(xml_data)
             deleted = 0
             for enr in enrollments:

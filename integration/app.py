@@ -34,6 +34,32 @@ app = Flask(__name__, template_folder='templates')
 app.secret_key = 'integration_server_secret_2024'
 
 
+# ---- XSD Validation ----
+
+SCHEMA_DIR = os.path.join(BASE_DIR, 'schema')
+
+def validate_xml_against_xsd(xml_data, xsd_filename):
+    """Validate XML data against an XSD schema file.
+
+    Returns (is_valid, error_message).
+    """
+    xsd_path = os.path.join(SCHEMA_DIR, xsd_filename)
+    if not os.path.exists(xsd_path):
+        return False, f'Schema file not found: {xsd_filename}'
+
+    try:
+        xml_doc = etree.fromstring(
+            xml_data.encode('utf-8') if isinstance(xml_data, str) else xml_data)
+        xsd_doc = etree.parse(xsd_path)
+        schema = etree.XMLSchema(xsd_doc)
+        schema.assertValid(xml_doc)
+        return True, None
+    except etree.DocumentInvalid as e:
+        return False, str(e)
+    except etree.XMLSyntaxError as e:
+        return False, f'XML parse error: {e}'
+
+
 # ---- XSLT Helpers ----
 
 def xslt_transform(xml_data, xslt_filename):
@@ -47,6 +73,36 @@ def xslt_transform(xml_data, xslt_filename):
     transform = etree.XSLT(xslt_doc)
     result = transform(xml_doc)
     return str(result)
+
+
+def fetch_college_native_via_xslt(college_name, data_type, timeout=5):
+    """Fetch native XML from a college and transform to unified format via XSLT.
+
+    data_type: 'students', 'courses', or 'enrollments'
+    """
+    # Map data type to native endpoint, XSLT file, and XSD schema
+    mapping = {
+        'students': ('/api/xml/native/students', 'formatStudent.xsl', 'student.xsd'),
+        'courses': ('/api/xml/native/courses', 'formatClass.xsl', 'class.xsd'),
+        'enrollments': ('/api/xml/native/enrollments', 'formatChoice.xsl', 'choice.xsd'),
+    }
+    if data_type not in mapping:
+        return None
+
+    endpoint, xslt_file, xsd_file = mapping[data_type]
+    native_xml = fetch_college_xml(college_name, endpoint, timeout)
+    if not native_xml:
+        return None
+
+    # Apply XSLT to convert from native to unified format
+    unified_xml = xslt_transform(native_xml, xslt_file)
+
+    # Validate the transformed XML against XSD schema
+    is_valid, error = validate_xml_against_xsd(unified_xml, xsd_file)
+    if not is_valid:
+        print(f'[XSD 验证失败] {college_name}/{data_type}: {error}')
+
+    return unified_xml
 
 
 def fetch_college_xml(college_name, endpoint, timeout=5):
@@ -101,6 +157,7 @@ def parse_courses_from_xml(xml_data, college):
             'time': el.findtext('time', '32'),
             'teacher': el.findtext('teacher', ''),
             'location': el.findtext('location', ''),
+            'shared': el.findtext('shared', '1'),
             'college': college,
             'college_name': COLLEGES[college]['name'],
             'dbms': COLLEGES[college]['dbms'],
@@ -126,6 +183,26 @@ def parse_students_from_xml(xml_data, college):
     return students
 
 
+def parse_enrollments_with_course(xml_data, college):
+    """Parse unified enrollment XML and return list with course details.
+
+    Each enrollment includes student_id, course_id, score, and college info.
+    """
+    if not xml_data:
+        return []
+    root = etree.fromstring(xml_data.encode('utf-8'))
+    enrollments = []
+    for el in root.findall('choice'):
+        enrollments.append({
+            'student_id': el.findtext('sid', ''),
+            'course_id': el.findtext('cid', ''),
+            'score': el.findtext('score', '0'),
+            'college': college,
+            'college_name': COLLEGES[college]['name'],
+        })
+    return enrollments
+
+
 def build_enrollment_xml(student_id, course_id, score=0):
     """Build unified enrollment XML for sending to colleges."""
     root = etree.Element('Choices')
@@ -146,13 +223,16 @@ def index():
 
 @app.route('/courses/shared')
 def shared_courses():
-    """Display all shared courses from all colleges."""
+    """Display all shared courses from all colleges via XSLT transformation."""
     all_courses = []
     for col_key in COLLEGES:
-        xml_data = fetch_college_xml(col_key, '/api/xml/courses')
+        # Use XSLT to fetch native XML and transform to unified format
+        xml_data = fetch_college_native_via_xslt(col_key, 'courses')
         if xml_data:
             courses = parse_courses_from_xml(xml_data, col_key)
-            all_courses.extend(courses)
+            # Filter only shared courses
+            shared = [c for c in courses if c.get('shared', '1') == '1']
+            all_courses.extend(shared)
     return render_template('integrated_dashboard.html',
                          colleges=COLLEGES,
                          all_courses=all_courses,
@@ -161,10 +241,10 @@ def shared_courses():
 
 @app.route('/students/all')
 def all_students():
-    """Display all students from all colleges."""
+    """Display all students from all colleges via XSLT."""
     all_students_list = []
     for col_key in COLLEGES:
-        xml_data = fetch_college_xml(col_key, '/api/xml/students')
+        xml_data = fetch_college_native_via_xslt(col_key, 'students')
         if xml_data:
             students = parse_students_from_xml(xml_data, col_key)
             all_students_list.extend(students)
@@ -215,10 +295,10 @@ def cross_college_enroll():
     message = None
     message_type = None
 
-    # Load all courses for display
+    # Load all courses for display via XSLT
     all_courses = []
     for col_key in COLLEGES:
-        xml_data = fetch_college_xml(col_key, '/api/xml/courses')
+        xml_data = fetch_college_native_via_xslt(col_key, 'courses')
         if xml_data:
             courses = parse_courses_from_xml(xml_data, col_key)
             all_courses.extend(courses)
@@ -352,6 +432,82 @@ def cross_college_withdraw():
                          message=message,
                          message_type=message_type,
                          active_tab='withdraw')
+
+
+@app.route('/my-courses', methods=['GET', 'POST'])
+def my_cross_college_courses():
+    """Query a student's cross-college enrollments across all colleges."""
+    enrollments = None
+    student_id = None
+    message = None
+    message_type = None
+
+    if request.method == 'POST':
+        student_id = request.form.get('student_id', '').strip()
+        if not student_id:
+            message = '请输入学号'
+            message_type = 'error'
+        else:
+            # Determine student's home college
+            student_college = None
+            for col_key in COLLEGES:
+                if student_id.startswith(f'STU{col_key}'):
+                    student_college = col_key
+                    break
+
+            if not student_college:
+                message = '无法识别学号，请检查后重试'
+                message_type = 'error'
+            else:
+                # Fetch enrollments from all colleges via XSLT
+                all_enrollments = []
+                for col_key in COLLEGES:
+                    xml_data = fetch_college_native_via_xslt(col_key, 'enrollments')
+                    if xml_data:
+                        parsed = parse_enrollments_with_course(xml_data, col_key)
+                        all_enrollments.extend(parsed)
+
+                # Filter for this student
+                enrollments = [e for e in all_enrollments
+                             if e['student_id'] == student_id]
+
+                # Separate home college courses and cross-college courses
+                home_courses = []
+                cross_courses = []
+                for e in enrollments:
+                    if e['college'] == student_college:
+                        home_courses.append(e)
+                    else:
+                        cross_courses.append(e)
+
+                # Enrich with course names
+                all_courses_map = {}
+                for col_key in COLLEGES:
+                    xml_data = fetch_college_native_via_xslt(col_key, 'courses')
+                    if xml_data:
+                        for c in parse_courses_from_xml(xml_data, col_key):
+                            all_courses_map[c['course_id']] = c
+
+                for e in enrollments:
+                    c = all_courses_map.get(e['course_id'], {})
+                    e['course_name'] = c.get('name', '未知课程')
+                    e['teacher'] = c.get('teacher', '')
+                    e['score_credit'] = c.get('score', '')
+
+                enrollments = cross_courses  # Show only cross-college courses
+
+                if not enrollments:
+                    enrollments = []
+                    message = f'学生 {student_id} 暂无跨院选课记录'
+                    message_type = 'info'
+
+    return render_template('integrated_dashboard.html',
+                         colleges=COLLEGES,
+                         enrollments=enrollments,
+                         student_id=student_id,
+                         message=message,
+                         message_type=message_type,
+                         active_tab='mycourses')
 
 
 @app.route('/api/colleges')

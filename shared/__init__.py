@@ -22,6 +22,7 @@ UF_CSCORE = 'score'
 UF_CTIME = 'time'
 UF_CTEACHER = 'teacher'
 UF_CLOCATION = 'location'
+UF_CSHARED = 'shared'
 
 # Unified enrollment fields
 UF_E_SID = 'sid'
