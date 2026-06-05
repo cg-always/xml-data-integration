@@ -2,8 +2,16 @@
   "name": "A",
   "name_cn": "学院A",
   "port": 5001,
-  "db_path": "data/college_a.db",
   "dbms": "SQL Server",
+  "database": {
+    "type": "mssql",
+    "driver": "pymssql",
+    "host": "localhost",
+    "port": 1433,
+    "name": "CollegeA",
+    "user": "sa",
+    "password": "CollegeA_Pass123!"
+  },
   "tables": {
     "account": {
       "name": "账号表",

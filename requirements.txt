@@ -1,5 +1,16 @@
 # Integrated Educational Management System — Requirements
+# 基于XML数据集成的异构数据库教务系统
 
 Flask>=3.0
 lxml>=6.0
 requests>=2.28
+sqlalchemy>=2.0
+
+# SQL Server driver (纯 Python，无需 ODBC)
+pymssql>=2.3
+
+# Oracle driver (Thin mode，无需 Oracle Instant Client)
+oracledb>=2.0
+
+# MySQL driver (纯 Python)
+pymysql>=1.1

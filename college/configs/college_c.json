@@ -2,8 +2,16 @@
   "name": "C",
   "name_cn": "学院C",
   "port": 5003,
-  "db_path": "data/college_c.db",
   "dbms": "MySQL",
+  "database": {
+    "type": "mysql",
+    "driver": "pymysql",
+    "host": "localhost",
+    "port": 3306,
+    "name": "college_c",
+    "user": "root",
+    "password": "123456"
+  },
   "tables": {
     "account": {
       "name": "账户表",

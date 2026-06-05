@@ -2,8 +2,16 @@
   "name": "B",
   "name_cn": "学院B",
   "port": 5002,
-  "db_path": "data/college_b.db",
   "dbms": "Oracle",
+  "database": {
+    "type": "oracle",
+    "driver": "oracledb",
+    "host": "localhost",
+    "port": 1521,
+    "service_name": "XEPDB1",
+    "user": "system",
+    "password": "CollegeB_Pass123"
+  },
   "tables": {
     "account": {
       "name": "账户表",
