@@ -132,6 +132,7 @@
                         <th>{{ config.tables.course.columns.location }}</th>
                         <th>{{ config.tables.enrollment.columns.score }}</th>
                         <th>所属学院</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -158,6 +159,21 @@
                             <span class="badge badge-{{ config.name|lower }}">{{ config.name_cn }}</span>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if c.is_external %}
+                            <form method="POST" action="{{ url_for('cross_college_drop') }}"
+                                  style="display:inline;" onsubmit="return confirm('确认退选 {{ c.college_name }} 的课程「{{ c.name }}」？');">
+                                <input type="hidden" name="course_id" value="{{ c.course_id }}">
+                                <button type="submit" class="btn btn-danger">退课</button>
+                            </form>
+                            {% else %}
+                            <form method="POST" action="{{ url_for('drop_course') }}"
+                                  style="display:inline;" onsubmit="return confirm('确认退选本学院课程「{{ c.name }}」？');">
+                                <input type="hidden" name="course_id" value="{{ c.course_id }}">
+                                <button type="submit" class="btn btn-danger">退课</button>
+                            </form>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -179,6 +195,7 @@
                         <th>{{ config.tables.course.columns.score }}</th>
                         <th>{{ config.tables.course.columns.teacher }}</th>
                         <th>{{ config.tables.course.columns.location }}</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -189,6 +206,13 @@
                         <td>{{ c.score }}</td>
                         <td>{{ c.teacher }}</td>
                         <td>{{ c.location }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('enroll_course') }}"
+                                  style="display:inline;" onsubmit="return confirm('确认选修本学院课程「{{ c.name }}」？');">
+                                <input type="hidden" name="course_id" value="{{ c.course_id }}">
+                                <button type="submit" class="btn btn-success">选课</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

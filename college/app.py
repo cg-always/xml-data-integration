@@ -168,11 +168,16 @@ def create_college_app(config_path):
         enrolled_ids = {c['course_id'] for c in all_enrolled}
         available_courses = [c for c in all_courses if c['course_id'] not in enrolled_ids]
 
+        message = request.args.get('message')
+        message_type = request.args.get('message_type')
+
         return render_template('student_dashboard.html',
                              config=config,
                              student=student_info,
                              enrolled=all_enrolled,
-                             available=available_courses)
+                             available=available_courses,
+                             message=message,
+                             message_type=message_type)
 
     @app.route('/student/cross-college')
     @login_required
@@ -300,6 +305,118 @@ def create_college_app(config_path):
                 msg = result_root.findtext('message', '未知错误')
                 return redirect(url_for('cross_college_courses',
                                         message=f'选课失败: {msg}',
+                                        message_type='error'))
+        except Exception as e:
+            return redirect(url_for('cross_college_courses',
+                                    message=f'请求失败: {str(e)}',
+                                    message_type='error'))
+
+    @app.route('/student/enroll', methods=['POST'])
+    @login_required
+    def enroll_course():
+        """Enroll in a local course (within own college)."""
+        student_id = session['user']
+        course_id = request.form.get('course_id', '').strip()
+
+        if not course_id:
+            return redirect(url_for('student',
+                                    message='请指定要选修的课程',
+                                    message_type='error'))
+
+        success = add_enrollment(config, student_id, course_id, 0)
+        if success:
+            return redirect(url_for('student',
+                                    message=f'选课成功！已选修课程 {course_id}',
+                                    message_type='success'))
+        else:
+            return redirect(url_for('student',
+                                    message=f'选课失败，可能已选过课程 {course_id}',
+                                    message_type='error'))
+
+    @app.route('/student/drop', methods=['POST'])
+    @login_required
+    def drop_course():
+        """Drop a local course (within own college)."""
+        student_id = session['user']
+        course_id = request.form.get('course_id', '').strip()
+
+        if not course_id:
+            return redirect(url_for('student',
+                                    message='请指定要退选的课程',
+                                    message_type='error'))
+
+        success = delete_enrollment(config, student_id, course_id)
+        if success:
+            return redirect(url_for('student',
+                                    message=f'退课成功！已退选课程 {course_id}',
+                                    message_type='success'))
+        else:
+            return redirect(url_for('student',
+                                    message=f'退课失败，未找到课程 {course_id} 的选课记录',
+                                    message_type='error'))
+
+    @app.route('/student/cross-college/drop', methods=['POST'])
+    @login_required
+    def cross_college_drop():
+        """Drop a cross-college course (enrolled in another college)."""
+        student_id = session['user']
+        course_id = request.form.get('course_id', '').strip()
+
+        if not course_id:
+            return redirect(url_for('cross_college_courses',
+                                    message='请指定要退选的课程',
+                                    message_type='error'))
+
+        # Determine target college from course ID
+        target_college = None
+        target_port = None
+        all_colleges = {
+            'A': 5001, 'B': 5002, 'C': 5003,
+        }
+        for col_key, port in all_colleges.items():
+            if course_id.startswith(f'COU{col_key}'):
+                target_college = col_key
+                target_port = port
+                break
+
+        if not target_college:
+            return redirect(url_for('cross_college_courses',
+                                    message='无法识别课程编号',
+                                    message_type='error'))
+
+        # Build delete enrollment XML
+        xml_root = etree.Element('Choices')
+        choice = etree.SubElement(xml_root, 'choice')
+        etree.SubElement(choice, 'sid').text = student_id
+        etree.SubElement(choice, 'cid').text = course_id
+        xml_data = etree.tostring(xml_root, encoding='utf-8', xml_declaration=True)
+
+        # Send to target college
+        try:
+            resp = http_requests.post(
+                f'http://127.0.0.1:{target_port}/api/xml/enrollments/delete',
+                data=xml_data,
+                headers={'Content-Type': 'application/xml'},
+                timeout=5)
+            result_root = etree.fromstring(resp.text.encode('utf-8')
+                                          if isinstance(resp.text, str)
+                                          else resp.text)
+            status = result_root.findtext('status', 'error')
+            if status == 'ok':
+                deleted = result_root.findtext('deleted', '0')
+                if int(deleted) > 0:
+                    college_names = {'A': '学院A', 'B': '学院B', 'C': '学院C'}
+                    return redirect(url_for('cross_college_courses',
+                                            message=f'跨院退课成功！已退选{college_names.get(target_college, target_college)}的课程 {course_id}',
+                                            message_type='success'))
+                else:
+                    return redirect(url_for('cross_college_courses',
+                                            message='退课失败，未找到该选课记录',
+                                            message_type='error'))
+            else:
+                msg = result_root.findtext('message', '未知错误')
+                return redirect(url_for('cross_college_courses',
+                                        message=f'退课失败: {msg}',
                                         message_type='error'))
         except Exception as e:
             return redirect(url_for('cross_college_courses',
