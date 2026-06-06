@@ -55,9 +55,16 @@ def _drop_tables(engine, config):
             tn = tables_cfg[key]['name']
 
             if db_type == 'mssql':
-                conn.execute(
-                    text(f"IF OBJECT_ID('dbo.\"{tn}\"', 'U') IS NOT NULL "
-                         f"DROP TABLE \"{tn}\""))
+                # Use TRUNCATE+DELETE to clear data reliably if table exists,
+                # then drop via raw connection for proper execution
+                try:
+                    conn.execute(text(f'DELETE FROM "{tn}"'))
+                except Exception:
+                    pass  # Table may not exist yet
+                try:
+                    conn.execute(text(f'DROP TABLE IF EXISTS "{tn}"'))
+                except Exception:
+                    pass
             elif db_type == 'oracle':
                 try:
                     conn.execute(text(f'DROP TABLE "{tn}"'))
@@ -208,7 +215,7 @@ def generate_college_data():
     print('\n所有测试数据已生成完成！')
     print('  学院A → SQL Server  (localhost:1433)')
     print('  学院B → Oracle      (localhost:1521)')
-    print('  学院C → MySQL       (localhost:3306)')
+    print('  学院C → MySQL       (localhost:3307)')
 
 
 if __name__ == '__main__':

@@ -73,7 +73,7 @@ def start_databases():
 
     healthy, status = check_containers_healthy()
     if healthy:
-        print('[数据库] 所有数据库容器已就绪 ✓')
+        print('[数据库] 所有数据库容器已就绪 [OK]')
         print(status)
         return
 
@@ -93,7 +93,7 @@ def start_databases():
     while waited < max_wait:
         healthy, status = check_containers_healthy()
         if healthy:
-            print(f'[数据库] 所有数据库已就绪 (等待 {waited}秒) ✓')
+            print(f'[数据库] 所有数据库已就绪 (等待 {waited}秒) [OK]')
             print(status)
             return
         time.sleep(5)

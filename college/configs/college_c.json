@@ -7,7 +7,7 @@
     "type": "mysql",
     "driver": "pymysql",
     "host": "localhost",
-    "port": 3306,
+    "port": 3307,
     "name": "college_c",
     "user": "root",
     "password": "123456"
