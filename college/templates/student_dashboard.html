@@ -80,10 +80,13 @@
     <div class="container">
         <!-- Navigation Tabs -->
         <div class="nav-tabs">
-            <a href="{{ url_for('student') }}" class="nav-tab {% if not cross_college %}active{% endif %}">
+            <a href="{{ url_for('enrolled_courses') }}" class="nav-tab {% if tab == 'enrolled' %}active{% endif %}">
+                已选课程
+            </a>
+            <a href="{{ url_for('local_courses') }}" class="nav-tab {% if tab == 'local' %}active{% endif %}">
                 本学院选课
             </a>
-            <a href="{{ url_for('cross_college_courses') }}" class="nav-tab {% if cross_college %}active{% endif %}">
+            <a href="{{ url_for('cross_college_courses') }}" class="nav-tab {% if tab == 'cross' %}active{% endif %}">
                 跨院选课
             </a>
         </div>
@@ -93,8 +96,8 @@
         <div class="message message-{{ message_type or 'success' }}">{{ message }}</div>
         {% endif %}
 
-        {% if not cross_college %}
-        <!-- ========== LOCAL ENROLLMENT TAB ========== -->
+        {% if tab == 'enrolled' %}
+        <!-- ========== ENROLLED COURSES TAB ========== -->
         <!-- Personal Info -->
         <div class="card">
             <h3>个人信息</h3>
@@ -183,6 +186,31 @@
             {% endif %}
         </div>
 
+        {% elif tab == 'local' %}
+        <!-- ========== LOCAL ENROLLMENT TAB ========== -->
+        <!-- Personal Info -->
+        <div class="card">
+            <h3>个人信息</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">{{ config.tables.student.columns.student_id }}</div>
+                    <div class="value">{{ student.student_id }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">{{ config.tables.student.columns.name }}</div>
+                    <div class="value">{{ student.name }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">{{ config.tables.student.columns.sex }}</div>
+                    <div class="value">{{ student.sex }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">{{ config.tables.student.columns.major }}</div>
+                    <div class="value">{{ student.major }}</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Available Courses (local) -->
         <div class="card">
             <h3>可选课程（{{ available|length }} 门）</h3>
@@ -222,7 +250,7 @@
             {% endif %}
         </div>
 
-        {% else %}
+        {% elif tab == 'cross' %}
         <!-- ========== CROSS-COLLEGE ENROLLMENT TAB ========== -->
 
         <!-- Personal Info -->

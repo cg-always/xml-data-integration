@@ -81,7 +81,7 @@ def create_college_app(config_path):
                     session['role'] = role
                     if role == 'admin':
                         return redirect(url_for('admin'))
-                    return redirect(url_for('student'))
+                    return redirect(url_for('enrolled_courses'))
                 error = '用户名或密码错误'
             else:
                 error = '请输入用户名和密码'
@@ -150,6 +150,13 @@ def create_college_app(config_path):
     @app.route('/student')
     @login_required
     def student():
+        """Redirect to enrolled courses tab by default."""
+        return redirect(url_for('enrolled_courses'))
+
+    @app.route('/student/enrolled')
+    @login_required
+    def enrolled_courses():
+        """Show all enrolled courses (local + cross-college) with drop option."""
         student_id = session['user']
         student_info = get_student(config, student_id)
         if not student_info:
@@ -164,8 +171,32 @@ def create_college_app(config_path):
         # Combine local and external enrolled courses
         all_enrolled = enrolled_courses + external_courses
 
+        message = request.args.get('message')
+        message_type = request.args.get('message_type')
+
+        return render_template('student_dashboard.html',
+                             config=config,
+                             student=student_info,
+                             tab='enrolled',
+                             enrolled=all_enrolled,
+                             message=message,
+                             message_type=message_type)
+
+    @app.route('/student/local')
+    @login_required
+    def local_courses():
+        """Show available local courses for enrollment."""
+        student_id = session['user']
+        student_info = get_student(config, student_id)
+        if not student_info:
+            return '学生信息不存在', 404
+
+        # Get all enrolled IDs to exclude
+        enrolled_courses = get_student_courses(config, student_id)
+        external_courses = _fetch_external_enrollments(student_id)
+        enrolled_ids = {c['course_id'] for c in enrolled_courses + external_courses}
+
         all_courses = get_all_courses(config)
-        enrolled_ids = {c['course_id'] for c in all_enrolled}
         available_courses = [c for c in all_courses if c['course_id'] not in enrolled_ids]
 
         message = request.args.get('message')
@@ -174,7 +205,7 @@ def create_college_app(config_path):
         return render_template('student_dashboard.html',
                              config=config,
                              student=student_info,
-                             enrolled=all_enrolled,
+                             tab='local',
                              available=available_courses,
                              message=message,
                              message_type=message_type)
@@ -235,7 +266,7 @@ def create_college_app(config_path):
         return render_template('student_dashboard.html',
                              config=config,
                              student=student_info,
-                             cross_college=True,
+                             tab='cross',
                              external_courses=all_external_courses,
                              other_colleges=other_colleges,
                              college_errors=college_errors,
@@ -319,17 +350,17 @@ def create_college_app(config_path):
         course_id = request.form.get('course_id', '').strip()
 
         if not course_id:
-            return redirect(url_for('student',
+            return redirect(url_for('local_courses',
                                     message='请指定要选修的课程',
                                     message_type='error'))
 
         success = add_enrollment(config, student_id, course_id, 0)
         if success:
-            return redirect(url_for('student',
+            return redirect(url_for('local_courses',
                                     message=f'选课成功！已选修课程 {course_id}',
                                     message_type='success'))
         else:
-            return redirect(url_for('student',
+            return redirect(url_for('local_courses',
                                     message=f'选课失败，可能已选过课程 {course_id}',
                                     message_type='error'))
 
@@ -341,17 +372,17 @@ def create_college_app(config_path):
         course_id = request.form.get('course_id', '').strip()
 
         if not course_id:
-            return redirect(url_for('student',
+            return redirect(url_for('enrolled_courses',
                                     message='请指定要退选的课程',
                                     message_type='error'))
 
         success = delete_enrollment(config, student_id, course_id)
         if success:
-            return redirect(url_for('student',
+            return redirect(url_for('enrolled_courses',
                                     message=f'退课成功！已退选课程 {course_id}',
                                     message_type='success'))
         else:
-            return redirect(url_for('student',
+            return redirect(url_for('enrolled_courses',
                                     message=f'退课失败，未找到课程 {course_id} 的选课记录',
                                     message_type='error'))
 
@@ -363,7 +394,7 @@ def create_college_app(config_path):
         course_id = request.form.get('course_id', '').strip()
 
         if not course_id:
-            return redirect(url_for('cross_college_courses',
+            return redirect(url_for('enrolled_courses',
                                     message='请指定要退选的课程',
                                     message_type='error'))
 
@@ -380,7 +411,7 @@ def create_college_app(config_path):
                 break
 
         if not target_college:
-            return redirect(url_for('cross_college_courses',
+            return redirect(url_for('enrolled_courses',
                                     message='无法识别课程编号',
                                     message_type='error'))
 
@@ -406,20 +437,20 @@ def create_college_app(config_path):
                 deleted = result_root.findtext('deleted', '0')
                 if int(deleted) > 0:
                     college_names = {'A': '学院A', 'B': '学院B', 'C': '学院C'}
-                    return redirect(url_for('cross_college_courses',
+                    return redirect(url_for('enrolled_courses',
                                             message=f'跨院退课成功！已退选{college_names.get(target_college, target_college)}的课程 {course_id}',
                                             message_type='success'))
                 else:
-                    return redirect(url_for('cross_college_courses',
+                    return redirect(url_for('enrolled_courses',
                                             message='退课失败，未找到该选课记录',
                                             message_type='error'))
             else:
                 msg = result_root.findtext('message', '未知错误')
-                return redirect(url_for('cross_college_courses',
+                return redirect(url_for('enrolled_courses',
                                         message=f'退课失败: {msg}',
                                         message_type='error'))
         except Exception as e:
-            return redirect(url_for('cross_college_courses',
+            return redirect(url_for('enrolled_courses',
                                     message=f'请求失败: {str(e)}',
                                     message_type='error'))
 
