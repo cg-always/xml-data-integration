@@ -50,6 +50,21 @@
         .btn-primary:hover { background: #5a6fd6; }
         .btn-danger { background: #e74c3c; color: white; }
         .btn-danger:hover { background: #c0392b; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #219a52; }
+        .nav-tabs { display: flex; gap: 2px; margin-bottom: 25px; }
+        .nav-tab {
+            padding: 10px 24px; border: none; background: #e0e0e0;
+            cursor: pointer; border-radius: 6px 6px 0 0; font-size: 14px;
+            text-decoration: none; color: #555;
+        }
+        .nav-tab.active { background: #667eea; color: white; }
+        .message { padding: 12px 18px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .message-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #2e7d32; }
+        .message-error { background: #ffebee; color: #c62828; border-left: 4px solid #c62828; }
+        .badge-a { background: #e3f2fd; color: #1565c0; }
+        .badge-b { background: #fce4ec; color: #c62828; }
+        .badge-c { background: #e8f5e9; color: #2e7d32; }
     </style>
 </head>
 <body>
@@ -63,6 +78,23 @@
     </div>
 
     <div class="container">
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <a href="{{ url_for('student') }}" class="nav-tab {% if not cross_college %}active{% endif %}">
+                本学院选课
+            </a>
+            <a href="{{ url_for('cross_college_courses') }}" class="nav-tab {% if cross_college %}active{% endif %}">
+                跨院选课
+            </a>
+        </div>
+
+        <!-- Messages -->
+        {% if message %}
+        <div class="message message-{{ message_type or 'success' }}">{{ message }}</div>
+        {% endif %}
+
+        {% if not cross_college %}
+        <!-- ========== LOCAL ENROLLMENT TAB ========== -->
         <!-- Personal Info -->
         <div class="card">
             <h3>个人信息</h3>
@@ -99,6 +131,7 @@
                         <th>{{ config.tables.course.columns.teacher }}</th>
                         <th>{{ config.tables.course.columns.location }}</th>
                         <th>{{ config.tables.enrollment.columns.score }}</th>
+                        <th>所属学院</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,10 +143,19 @@
                         <td>{{ c.teacher }}</td>
                         <td>{{ c.location }}</td>
                         <td>
-                            {% if c.grade >= 60 %}
+                            {% if c.is_external %}
+                            <span style="color:#999;">—</span>
+                            {% elif c.grade >= 60 %}
                             <span class="badge badge-pass">{{ c.grade }}</span>
                             {% else %}
                             <span class="badge badge-fail">{{ c.grade }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.is_external %}
+                            <span class="badge badge-{{ c.college|lower }}">{{ c.college_name }}</span>
+                            {% else %}
+                            <span class="badge badge-{{ config.name|lower }}">{{ config.name_cn }}</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -155,6 +197,105 @@
             <div class="empty-state">没有可选课程</div>
             {% endif %}
         </div>
+
+        {% else %}
+        <!-- ========== CROSS-COLLEGE ENROLLMENT TAB ========== -->
+
+        <!-- Personal Info -->
+        <div class="card">
+            <h3>个人信息</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">{{ config.tables.student.columns.student_id }}</div>
+                    <div class="value">{{ student.student_id }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">{{ config.tables.student.columns.name }}</div>
+                    <div class="value">{{ student.name }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">所属学院</div>
+                    <div class="value">{{ config.name_cn }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cross-College Course List -->
+        <div class="card">
+            <h3>其他学院共享课程（{{ external_courses|length if external_courses else 0 }} 门）</h3>
+            <p style="color:#666; margin-bottom:15px; font-size:13px;">
+                以下课程来自其他学院，选择后课程将记录在对应学院的数据库中。
+            </p>
+            {% if college_errors %}
+            <div class="message message-error">
+                部分学院连接失败：{{ college_errors|join('；') }}
+            </div>
+            {% endif %}
+
+            {% if external_courses %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>课程编号</th>
+                        <th>课程名称</th>
+                        <th>学分</th>
+                        <th>教师</th>
+                        <th>上课地点</th>
+                        <th>学时</th>
+                        <th>所属学院</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in external_courses %}
+                    <tr>
+                        <td><strong>{{ c.course_id }}</strong></td>
+                        <td>{{ c.name }}</td>
+                        <td>{{ c.score }}</td>
+                        <td>{{ c.teacher }}</td>
+                        <td>{{ c.location }}</td>
+                        <td>{{ c.time }}</td>
+                        <td><span class="badge badge-{{ c.college|lower }}">{{ c.college_name }}</span></td>
+                        <td>
+                            <form method="POST" action="{{ url_for('cross_college_enroll') }}"
+                                  style="display:inline;" onsubmit="return confirm('确认选修 {{ c.college_name }} 的课程「{{ c.name }}」？');">
+                                <input type="hidden" name="course_id" value="{{ c.course_id }}">
+                                <button type="submit" class="btn btn-success">选课</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                {% if college_errors %}
+                所有其他学院均无法连接
+                {% else %}
+                暂无可选课程（可能已选完其他学院的所有课程）
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Enroll Form -->
+        <div class="card">
+            <h3>快速选课</h3>
+            <p style="color:#666; margin-bottom:15px; font-size:13px;">
+                直接输入其他学院的课程编号进行选课。
+            </p>
+            <form method="POST" action="{{ url_for('cross_college_enroll') }}" style="max-width:500px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; margin-bottom:4px; font-weight:bold; font-size:13px; color:#555;">课程编号</label>
+                    <input type="text" name="course_id" placeholder="例如：COUB001、COUC010"
+                           required pattern="COU[ABC]\d{3}"
+                           title="格式：COU + 学院代码(A/B/C) + 3位数字"
+                           style="width:100%; padding:10px 14px; border:2px solid #e0e0e0; border-radius:6px; font-size:15px;">
+                </div>
+                <button type="submit" class="btn btn-success">确认选课</button>
+            </form>
+        </div>
+        {% endif %}
     </div>
 </body>
 </html>

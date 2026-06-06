@@ -13,8 +13,9 @@ import os
 import sys
 from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, session, Response
+from flask import Flask, render_template, request, redirect, url_for, session, Response, jsonify
 from lxml import etree
+import requests as http_requests
 
 # Add parent dir to path for shared imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -91,6 +92,61 @@ def create_college_app(config_path):
         session.clear()
         return redirect(url_for('login'))
 
+    def _fetch_external_enrollments(student_id):
+        """Fetch cross-college enrollment records for a student from other colleges."""
+        my_college = config['name']
+        all_colleges = {
+            'A': {'name': '学院A', 'port': 5001},
+            'B': {'name': '学院B', 'port': 5002},
+            'C': {'name': '学院C', 'port': 5003},
+        }
+        external_courses = []
+        for col_key, col_info in all_colleges.items():
+            if col_key == my_college:
+                continue
+            try:
+                # Get all enrollments from the target college
+                resp = http_requests.get(
+                    f'http://127.0.0.1:{col_info["port"]}/api/xml/enrollments',
+                    timeout=5)
+                resp.encoding = 'utf-8'
+                root = etree.fromstring(resp.text.encode('utf-8'))
+                # Find enrollments for this student
+                student_enrolled_cids = []
+                for el in root.findall('choice'):
+                    sid = el.findtext('sid', '')
+                    cid = el.findtext('cid', '')
+                    if sid == student_id and cid:
+                        student_enrolled_cids.append(cid)
+
+                # Get course details for each enrolled course
+                for cid in student_enrolled_cids:
+                    try:
+                        course_resp = http_requests.get(
+                            f'http://127.0.0.1:{col_info["port"]}/api/xml/courses',
+                            timeout=5)
+                        course_resp.encoding = 'utf-8'
+                        course_root = etree.fromstring(course_resp.text.encode('utf-8'))
+                        for cel in course_root.findall('class'):
+                            if cel.findtext('id', '') == cid:
+                                external_courses.append({
+                                    'course_id': cid,
+                                    'name': cel.findtext('name', ''),
+                                    'score': cel.findtext('score', '0'),
+                                    'teacher': cel.findtext('teacher', ''),
+                                    'location': cel.findtext('location', ''),
+                                    'grade': 0,
+                                    'college': col_key,
+                                    'college_name': col_info['name'],
+                                    'is_external': True,
+                                })
+                                break
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        return external_courses
+
     @app.route('/student')
     @login_required
     def student():
@@ -99,16 +155,156 @@ def create_college_app(config_path):
         if not student_info:
             return '学生信息不存在', 404
 
+        # Local enrolled courses
         enrolled_courses = get_student_courses(config, student_id)
+
+        # Cross-college enrolled courses from other colleges
+        external_courses = _fetch_external_enrollments(student_id)
+
+        # Combine local and external enrolled courses
+        all_enrolled = enrolled_courses + external_courses
+
         all_courses = get_all_courses(config)
-        enrolled_ids = {c['course_id'] for c in enrolled_courses}
+        enrolled_ids = {c['course_id'] for c in all_enrolled}
         available_courses = [c for c in all_courses if c['course_id'] not in enrolled_ids]
 
         return render_template('student_dashboard.html',
                              config=config,
                              student=student_info,
-                             enrolled=enrolled_courses,
+                             enrolled=all_enrolled,
                              available=available_courses)
+
+    @app.route('/student/cross-college')
+    @login_required
+    def cross_college_courses():
+        """Display courses from other colleges for cross-college enrollment."""
+        student_id = session['user']
+        student_info = get_student(config, student_id)
+        if not student_info:
+            return '学生信息不存在', 404
+
+        # Get ALL enrolled courses (local + external) to exclude already-enrolled
+        local_enrolled = get_student_courses(config, student_id)
+        external_enrolled = _fetch_external_enrollments(student_id)
+        all_enrolled_ids = {c['course_id'] for c in local_enrolled + external_enrolled}
+
+        # Determine which colleges are "other" colleges
+        my_college = config['name']
+        other_colleges = {
+            k: v for k, v in {
+                'A': {'name': '学院A', 'port': 5001},
+                'B': {'name': '学院B', 'port': 5002},
+                'C': {'name': '学院C', 'port': 5003},
+            }.items() if k != my_college
+        }
+
+        # Fetch courses from other colleges
+        all_external_courses = []
+        college_errors = []
+        for col_key, col_info in other_colleges.items():
+            try:
+                resp = http_requests.get(
+                    f'http://127.0.0.1:{col_info["port"]}/api/xml/courses',
+                    timeout=5)
+                resp.encoding = 'utf-8'
+                root = etree.fromstring(resp.text.encode('utf-8'))
+                for el in root.findall('class'):
+                    cid = el.findtext('id', '')
+                    if cid not in all_enrolled_ids:
+                        all_external_courses.append({
+                            'course_id': cid,
+                            'name': el.findtext('name', ''),
+                            'score': el.findtext('score', '0'),
+                            'teacher': el.findtext('teacher', ''),
+                            'location': el.findtext('location', ''),
+                            'time': el.findtext('time', '32'),
+                            'college': col_key,
+                            'college_name': col_info['name'],
+                        })
+            except Exception as e:
+                college_errors.append(f'{col_info["name"]}: {str(e)}')
+
+        message = request.args.get('message')
+        message_type = request.args.get('message_type')
+
+        return render_template('student_dashboard.html',
+                             config=config,
+                             student=student_info,
+                             cross_college=True,
+                             external_courses=all_external_courses,
+                             other_colleges=other_colleges,
+                             college_errors=college_errors,
+                             message=message,
+                             message_type=message_type)
+
+    @app.route('/student/cross-college/enroll', methods=['POST'])
+    @login_required
+    def cross_college_enroll():
+        """Enroll in a course from another college."""
+        student_id = session['user']
+        course_id = request.form.get('course_id', '').strip()
+
+        if not course_id:
+            return redirect(url_for('cross_college_courses',
+                                    message='请输入课程编号',
+                                    message_type='error'))
+
+        # Determine target college from course ID
+        target_college = None
+        target_port = None
+        all_colleges = {
+            'A': 5001, 'B': 5002, 'C': 5003,
+        }
+        for col_key, port in all_colleges.items():
+            if course_id.startswith(f'COU{col_key}'):
+                target_college = col_key
+                target_port = port
+                break
+
+        if not target_college:
+            return redirect(url_for('cross_college_courses',
+                                    message='无法识别课程编号',
+                                    message_type='error'))
+
+        # Build enrollment XML
+        xml_root = etree.Element('Choices')
+        choice = etree.SubElement(xml_root, 'choice')
+        etree.SubElement(choice, 'sid').text = student_id
+        etree.SubElement(choice, 'cid').text = course_id
+        etree.SubElement(choice, 'score').text = '0'
+        xml_data = etree.tostring(xml_root, encoding='utf-8', xml_declaration=True)
+
+        # Send to target college
+        try:
+            resp = http_requests.post(
+                f'http://127.0.0.1:{target_port}/api/xml/enrollments/import',
+                data=xml_data,
+                headers={'Content-Type': 'application/xml'},
+                timeout=5)
+            result_root = etree.fromstring(resp.text.encode('utf-8')
+                                          if isinstance(resp.text, str)
+                                          else resp.text)
+            status = result_root.findtext('status', 'error')
+            if status == 'ok':
+                imported = result_root.findtext('imported', '0')
+                if int(imported) > 0:
+                    college_names = {'A': '学院A', 'B': '学院B', 'C': '学院C'}
+                    return redirect(url_for('cross_college_courses',
+                                            message=f'跨院选课成功！已选修{college_names.get(target_college, target_college)}的课程 {course_id}',
+                                            message_type='success'))
+                else:
+                    return redirect(url_for('cross_college_courses',
+                                            message='选课失败，可能已选过该课程',
+                                            message_type='error'))
+            else:
+                msg = result_root.findtext('message', '未知错误')
+                return redirect(url_for('cross_college_courses',
+                                        message=f'选课失败: {msg}',
+                                        message_type='error'))
+        except Exception as e:
+            return redirect(url_for('cross_college_courses',
+                                    message=f'请求失败: {str(e)}',
+                                    message_type='error'))
 
     @app.route('/admin')
     @login_required
