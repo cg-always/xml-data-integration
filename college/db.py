@@ -11,7 +11,7 @@ preserving each college's heterogeneous table/column naming.
 
 from sqlalchemy import (
     create_engine, MetaData, Table, Column,
-    String, Integer, Text, text, inspect,
+    String, Integer, Text, Unicode, text, inspect,
     PrimaryKeyConstraint,
 )
 from sqlalchemy.exc import IntegrityError
@@ -159,36 +159,36 @@ def init_db(config):
     # Account table
     ac = tables_cfg['account']
     Table(ac['name'], metadata,
-          Column(ac['columns']['account_id'], String(50), primary_key=True),
-          Column(ac['columns']['password'], String(100), nullable=False),
-          Column(ac['columns']['role'], String(20), nullable=False),
+          Column(ac['columns']['account_id'], Unicode(50), primary_key=True),
+          Column(ac['columns']['password'], Unicode(100), nullable=False),
+          Column(ac['columns']['role'], Unicode(20), nullable=False),
           )
 
     # Student table
     st = tables_cfg['student']
     Table(st['name'], metadata,
-          Column(st['columns']['student_id'], String(50), primary_key=True),
-          Column(st['columns']['name'], String(100), nullable=False),
-          Column(st['columns']['sex'], String(10), nullable=False),
-          Column(st['columns']['major'], String(100), nullable=False),
+          Column(st['columns']['student_id'], Unicode(50), primary_key=True),
+          Column(st['columns']['name'], Unicode(100), nullable=False),
+          Column(st['columns']['sex'], Unicode(10), nullable=False),
+          Column(st['columns']['major'], Unicode(100), nullable=False),
           )
 
     # Course table
     co = tables_cfg['course']
     Table(co['name'], metadata,
-          Column(co['columns']['course_id'], String(50), primary_key=True),
-          Column(co['columns']['name'], String(200), nullable=False),
+          Column(co['columns']['course_id'], Unicode(50), primary_key=True),
+          Column(co['columns']['name'], Unicode(200), nullable=False),
           Column(co['columns']['score'], Integer, nullable=False),
-          Column(co['columns']['teacher'], String(100), nullable=False),
-          Column(co['columns']['location'], String(200), nullable=False),
+          Column(co['columns']['teacher'], Unicode(100), nullable=False),
+          Column(co['columns']['location'], Unicode(200), nullable=False),
           Column(co['columns']['time'], Integer, default=32),
           )
 
     # Enrollment table (composite PK)
     en = tables_cfg['enrollment']
     Table(en['name'], metadata,
-          Column(en['columns']['student_id'], String(50), nullable=False),
-          Column(en['columns']['course_id'], String(50), nullable=False),
+          Column(en['columns']['student_id'], Unicode(50), nullable=False),
+          Column(en['columns']['course_id'], Unicode(50), nullable=False),
           Column(en['columns']['score'], Integer, default=0),
           PrimaryKeyConstraint(
               en['columns']['student_id'],
@@ -200,7 +200,7 @@ def init_db(config):
 
 
 def _ensure_database_mssql(config):
-    """Create the SQL Server database if it doesn't exist."""
+    """Create the SQL Server database if it doesn't exist, with UTF-8 collation."""
     db_cfg = config['database']
     db_name = db_cfg['name']
     user = quote_plus(db_cfg['user'])
@@ -216,7 +216,9 @@ def _ensure_database_mssql(config):
         conn.autocommit(True)
         cursor = conn.cursor()
         cursor.execute(
-            f"IF DB_ID('{db_name}') IS NULL CREATE DATABASE [{db_name}]"
+            f"IF DB_ID('{db_name}') IS NULL "
+            f"CREATE DATABASE [{db_name}] "
+            f"COLLATE Latin1_General_100_CI_AS_SC_UTF8"
         )
         cursor.close()
 

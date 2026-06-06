@@ -41,8 +41,34 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  # ============================================================
+  # 学院C — MySQL 8.0
+  # ============================================================
+  mysql:
+    image: mysql:8.0
+    container_name: college_c_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: "college_c"
+      MYSQL_CHARSET: "utf8mb4"
+      MYSQL_COLLATION: "utf8mb4_unicode_ci"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    restart: unless-stopped
+
 volumes:
   sqlserver_data:
     name: college_a_sqlserver_data
   oracle_data:
     name: college_b_oracle_data
+  mysql_data:
+    name: college_c_mysql_data
