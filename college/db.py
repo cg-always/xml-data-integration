@@ -212,15 +212,13 @@ def _ensure_database_mssql(config):
                                   pool_pre_ping=True, pool_recycle=1800,
                                   connect_args={'tds_version': '7.0'})
 
-    with master_engine.raw_connection() as conn:
-        conn.autocommit(True)
-        cursor = conn.cursor()
-        cursor.execute(
+    with master_engine.connect() as conn:
+        conn.execute(text(
             f"IF DB_ID('{db_name}') IS NULL "
             f"CREATE DATABASE [{db_name}] "
             f"COLLATE Latin1_General_100_CI_AS_SC_UTF8"
-        )
-        cursor.close()
+        ))
+        conn.commit()
 
     master_engine.dispose()
 
