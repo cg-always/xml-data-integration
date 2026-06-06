@@ -1,14 +1,14 @@
-# 集成教务管理系统 — 基于XML数据集成技术
+# 集成教务管理系统 — 基于 XML 数据集成技术
 
 ## 项目概述
 
-本系统基于 **XML数据集成技术**，将学院A（SQL Server）、学院B（Oracle）、学院C（MySQL）三个**真实异构数据库**的教务系统互联互通，实现跨院系课程共享。
+本系统基于 **XML 数据集成技术**，将学院A（SQL Server）、学院B（Oracle）、学院C（MySQL）三个**真实异构数据库**的教务系统互联互通，实现跨院系课程共享。
 
 核心特性：
-- **异构DBMS**: 底层使用三种不同的数据库管理系统（SQL Server / Oracle / MySQL），全部通过 Docker 容器运行
+- **异构 DBMS**：底层使用三种不同的数据库管理系统（SQL Server / Oracle / MySQL），全部通过 Docker 容器运行
 - **透明性**：屏蔽底层数据库差异，用户无需关注数据分布
-- **可扩展性**：基于XML标准格式进行数据交换，采用XSLT进行格式转换
-- **健壮性**：XML Schema验证保证数据规范性
+- **可扩展性**：基于 XML 标准格式进行数据交换，采用 XSLT 进行格式转换
+- **健壮性**：XML Schema 验证保证数据规范性
 - **安全性**：各学院独立认证，数据按需暴露
 
 ## 技术架构
@@ -56,24 +56,23 @@
 
 ## 从零启动步骤
 
-### 步骤1：克隆并安装Python依赖
+### 步骤 1：安装 Python 依赖
 
 ```bash
-git clone <repo-url> hw3
-cd hw3
+cd xml-data-integration
 pip install -r requirements.txt
 ```
 
 依赖包说明：
-- **Flask**：Web应用框架，用于构建各学院和集成服务器的GUI界面
-- **lxml**：XML处理库，用于XML生成、解析和XSLT转换
-- **requests**：HTTP客户端库，用于集成服务器与各学院之间的通信
+- **Flask**：Web 应用框架，用于构建各学院和集成服务器的 GUI 界面
+- **lxml**：XML 处理库，用于 XML 生成、解析和 XSLT 转换
+- **requests**：HTTP 客户端库，用于集成服务器与各学院之间的通信
 - **sqlalchemy**：数据库抽象层，统一访问三种异构数据库
-- **pymssql**：SQL Server 数据库驱动（纯Python，无需ODBC）
-- **oracledb**：Oracle 数据库驱动（Thin模式，无需Oracle Instant Client）
-- **pymysql**：MySQL 数据库驱动（纯Python）
+- **pymssql**：SQL Server 数据库驱动（纯 Python，无需 ODBC）
+- **oracledb**：Oracle 数据库驱动（Thin 模式，无需 Oracle Instant Client）
+- **pymysql**：MySQL 数据库驱动（纯 Python）
 
-### 步骤2：启动数据库容器
+### 步骤 2：启动数据库容器
 
 ```bash
 docker compose up -d
@@ -88,13 +87,13 @@ docker compose ps
 # 三个容器的 STATUS 应显示 "(healthy)"
 ```
 
-### 步骤3：一键启动系统
+### 步骤 3：一键启动系统
 
 ```bash
 python run.py
 ```
 
-首次运行会自动生成测试数据（50名学生 + 10门课程 + 250条选课记录），然后启动全部四个服务器：
+首次运行会自动生成测试数据（50 名学生 + 10 门课程 + 250 条选课记录），然后启动全部四个服务器：
 
 ```
 ============================================================
@@ -118,7 +117,7 @@ python run.py
 [集成服务器] 启动于 http://127.0.0.1:5000
 ```
 
-### 步骤4：访问系统
+### 步骤 4：访问系统
 
 打开浏览器访问以下地址：
 
@@ -129,23 +128,23 @@ python run.py
 | 学院B教务系统 | http://127.0.0.1:5002/login | Oracle，中文列名（不同命名） |
 | 学院C教务系统 | http://127.0.0.1:5003/login | MySQL，英文缩写列名 |
 
-### 步骤5：测试功能
+### 步骤 5：测试功能
 
 #### 5.1 各学院独立登录
 
 | 角色 | 用户名 | 密码 | 说明 |
 |------|--------|------|------|
 | 管理员 | admin | admin123 | 可查看学生、课程、统计信息 |
-| 学生 | STUA001 | 123456 | 学院A学生（SQL Server） |
-| 学生 | STUB010 | 123456 | 学院B学生（Oracle） |
-| 学生 | STUC020 | 123456 | 学院C学生（MySQL） |
+| 学生 | STUA001 | 123456 | 学院A 学生（SQL Server） |
+| 学生 | STUB010 | 123456 | 学院B 学生（Oracle） |
+| 学生 | STUC020 | 123456 | 学院C 学生（MySQL） |
 
 #### 5.2 跨院选课
 
 1. 打开集成服务器 http://127.0.0.1:5000
 2. 点击导航栏「跨院选课」
 3. 输入学号（如 `STUA001`）和课程编号（如 `COUB001`）
-4. 点击「确认选课」，学生STUA001（学院A）即选修了COUB001（学院B）的课程
+4. 点击「确认选课」，学生 STUA001（学院A）即选修了 COUB001（学院B）的课程
 
 #### 5.3 退选课程
 
@@ -159,7 +158,7 @@ python run.py
 - 三个学院的学生总数、课程总数、选课记录总数
 - 各学院详细统计信息
 
-### 步骤6：停止系统
+### 步骤 6：停止系统
 
 在 `run.py` 终端中按 `Ctrl+C` 停止所有服务器。
 
@@ -176,48 +175,48 @@ docker compose down -v
 ## 项目结构
 
 ```
-hw3/
+xml-data-integration/
 ├── docker-compose.yml               # 三数据库容器编排（SQL Server + Oracle + MySQL）
 ├── run.py                           # 一键启动所有服务器 + 自动生成测试数据
-├── requirements.txt                 # Python依赖清单
+├── requirements.txt                 # Python 依赖清单
 ├── README.md                        # 本文档
 ├── shared/                          # 共享模块
-│   ├── __init__.py                  # 统一XML格式常量定义
-│   └── xml_schemas.py               # XML Schema定义（XSD）
+│   ├── __init__.py                  # 统一 XML 格式常量定义
+│   └── xml_schemas.py               # XML Schema 定义（XSD）
 ├── college/                         # 学院教务系统
-│   ├── app.py                       # 可配置Flask应用（三学院共用）
-│   ├── db.py                        # 数据库操作层（SQLAlchemy Core，支持三种DBMS）
-│   ├── xml_api.py                   # XML数据导出/导入（统一格式 ↔ 本地格式）
-│   ├── data_generator.py            # 测试数据生成器（50学生 + 10课程 + 250选课）
+│   ├── app.py                       # 可配置 Flask 应用（三学院共用）
+│   ├── db.py                        # 数据库操作层（SQLAlchemy Core，支持三种 DBMS）
+│   ├── xml_api.py                   # XML 数据导出/导入（统一格式 ↔ 本地格式）
+│   ├── data_generator.py            # 测试数据生成器（50 学生 + 10 课程 + 250 选课）
 │   ├── configs/                     # 三学院异构配置
-│   │   ├── college_a.json          # 学院A配置（SQL Server，中文列名）
-│   │   ├── college_b.json          # 学院B配置（Oracle，中文列名，不同命名 + 语义交换）
-│   │   └── college_c.json          # 学院C配置（MySQL，英文缩写列名）
+│   │   ├── college_a.json          # 学院A 配置（SQL Server，中文列名）
+│   │   ├── college_b.json          # 学院B 配置（Oracle，中文列名，不同命名 + 语义交换）
+│   │   └── college_c.json          # 学院C 配置（MySQL，英文缩写列名）
 │   └── templates/                   # 学院前端模板
-│       ├── login.html
-│       ├── student_dashboard.html
-│       └── admin_dashboard.html
+│       ├── login.html               # 登录页面
+│       ├── student_dashboard.html   # 学生控制面板
+│       └── admin_dashboard.html     # 管理员控制面板
 ├── integration/                     # 集成服务器
 │   ├── app.py                       # 集成服务器主应用（跨院选课、退课、统计）
 │   ├── templates/
-│   │   └── integrated_dashboard.html
-│   ├── xslt/                        # XSLT样式表（12个）
+│   │   └── integrated_dashboard.html # 集成服务器前端
+│   ├── xslt/                        # XSLT 样式表（12 个）
 │   │   ├── formatStudent.xsl       # 学院格式 → 统一学生格式
 │   │   ├── formatClass.xsl         # 学院格式 → 统一课程格式
 │   │   ├── formatChoice.xsl        # 学院格式 → 统一选课格式
-│   │   ├── studentToA.xsl          # 统一格式 → 学院A学生格式
-│   │   ├── studentToB.xsl          # 统一格式 → 学院B学生格式
-│   │   ├── studentToC.xsl          # 统一格式 → 学院C学生格式
-│   │   ├── classToA.xsl            # 统一格式 → 学院A课程格式
-│   │   ├── classToB.xsl            # 统一格式 → 学院B课程格式
-│   │   ├── classToC.xsl            # 统一格式 → 学院C课程格式
-│   │   ├── choiceToA.xsl           # 统一格式 → 学院A选课格式
-│   │   ├── choiceToB.xsl           # 统一格式 → 学院B选课格式
-│   │   └── choiceToC.xsl           # 统一格式 → 学院C选课格式
-│   └── schema/                      # XML Schema验证文件
-│       ├── student.xsd
-│       ├── class.xsd
-│       └── choice.xsd
+│   │   ├── studentToA.xsl          # 统一格式 → 学院A 学生格式
+│   │   ├── studentToB.xsl          # 统一格式 → 学院B 学生格式
+│   │   ├── studentToC.xsl          # 统一格式 → 学院C 学生格式
+│   │   ├── classToA.xsl            # 统一格式 → 学院A 课程格式
+│   │   ├── classToB.xsl            # 统一格式 → 学院B 课程格式
+│   │   ├── classToC.xsl            # 统一格式 → 学院C 课程格式
+│   │   ├── choiceToA.xsl           # 统一格式 → 学院A 选课格式
+│   │   ├── choiceToB.xsl           # 统一格式 → 学院B 选课格式
+│   │   └── choiceToC.xsl           # 统一格式 → 学院C 选课格式
+│   └── schema/                      # XML Schema 验证文件
+│       ├── student.xsd              # 学生统一格式校验
+│       ├── class.xsd                # 课程统一格式校验
+│       └── choice.xsd               # 选课统一格式校验
 └── .gitignore
 ```
 
@@ -365,7 +364,7 @@ python run.py
 
 ### SQL Server 中文支持
 
-学院A使用 SQL Server 2022。为确保中文字符正确存储和显示，系统进行了以下处理：
+学院A 使用 SQL Server 2022。为确保中文字符正确存储和显示，系统进行了以下处理：
 
 1. **列类型**：所有字符串列使用 `NVARCHAR`（SQLAlchemy `Unicode` 类型），支持完整 Unicode 字符集
 2. **数据库排序规则**：`Latin1_General_100_CI_AS_SC_UTF8`，支持 UTF-8 编码
@@ -373,11 +372,11 @@ python run.py
 
 ### 异构语义映射
 
-学院B（Oracle）的课程表中「学分」和「学时」列名语义与学院A相反，XSLT样式表提供了完整的双向映射转换：
+学院B（Oracle）的课程表中「学分」和「学时」列名语义与学院A 相反，XSLT 样式表提供了完整的双向映射转换：
 
 | 转换方向 | 文件 | 功能 |
 |---------|------|------|
-| 学院A格式 → 统一格式 | formatClass.xsl | 识别各学院列名，输出统一XML |
-| 统一格式 → 学院A格式 | classToA.xsl | 正确映射 score↔学分, time↔学时 |
-| 统一格式 → 学院B格式 | classToB.xsl | 正确映射 score↔学时, time↔学分 |
-| 统一格式 → 学院C格式 | classToC.xsl | 正确映射 score↔Cpt, time↔time |
+| 学院A 格式 → 统一格式 | formatClass.xsl | 识别各学院列名，输出统一 XML |
+| 统一格式 → 学院A 格式 | classToA.xsl | 正确映射 score↔学分, time↔学时 |
+| 统一格式 → 学院B 格式 | classToB.xsl | 正确映射 score↔学时, time↔学分 |
+| 统一格式 → 学院C 格式 | classToC.xsl | 正确映射 score↔Cpt, time↔time |
